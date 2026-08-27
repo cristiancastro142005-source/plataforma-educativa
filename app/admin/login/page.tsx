@@ -17,7 +17,7 @@ export default async function AdminLoginPage({ searchParams }: PageProps) {
         
         {/* Cabecera */}
         <div style={{ textAlign: 'center', marginBottom: '24px' }}>
-          <span style={{ fontSize: '2.5rem' }}>üíº</span>
+          <span style={{ fontSize: '2.5rem' }}>??</span>
           <h1 style={{ fontSize: '1.5rem', color: '#0F172A', marginTop: '12px', marginBottom: '8px' }}>Acceso Profesor</h1>
           <p style={{ color: '#64748B', fontSize: '0.875rem' }}>Ingresa tus credenciales de docente para administrar la plataforma.</p>
         </div>
@@ -25,40 +25,40 @@ export default async function AdminLoginPage({ searchParams }: PageProps) {
         {/* Formulario de Login */}
         <form action={loginProfessor} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
           <div>
-            <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 500, color: '#0F172A', marginBottom: '6px' }}>Correo electr√≥nico</label>
+            <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 500, color: '#0F172A', marginBottom: '6px' }}>Correo electrÛnico</label>
             <input 
-              type="email" 
-              name="email" 
+              type='email' 
+              name='email' 
               required 
-              placeholder="profesor@ejemplo.com"
+              placeholder='profesor@ejemplo.com'
               style={{ width: '100%', padding: '10px 14px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '0.95rem', outline: 'none', boxSizing: 'border-box' }}
             />
           </div>
 
           <div>
-            <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 500, color: '#0F172A', marginBottom: '6px' }}>Contrase√±a</label>
+            <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 500, color: '#0F172A', marginBottom: '6px' }}>ContraseÒa</label>
             <input 
-              type="password" 
-              name="password" 
+              type='password' 
+              name='password' 
               required 
-              placeholder="‚Ä¢‚Ä¢‚Ä¢‚Ä¢‚Ä¢‚Ä¢‚Ä¢‚Ä¢"
+              placeholder='ïïïïïïïï'
               style={{ width: '100%', padding: '10px 14px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '0.95rem', outline: 'none', boxSizing: 'border-box' }}
             />
           </div>
 
           {hasError && (
             <div style={{ color: '#EF4444', fontSize: '0.85rem', textAlign: 'center' }}>
-              Credenciales incorrectas. Int√©ntalo de nuevo.
+              Credenciales incorrectas. IntÈntalo de nuevo.
             </div>
           )}
 
-          <button type="submit" style={{ background: '#4F46E5', color: '#FFFFFF', border: 'none', padding: '12px', borderRadius: '8px', fontWeight: 600, cursor: 'pointer', fontSize: '0.95rem', marginTop: '8px' }}>
-            Iniciar Sesi√≥n
+          <button type='submit' style={{ background: '#4F46E5', color: '#FFFFFF', border: 'none', padding: '12px', borderRadius: '8px', fontWeight: 600, cursor: 'pointer', fontSize: '0.95rem', marginTop: '8px' }}>
+            Iniciar SesiÛn
           </button>
         </form>
 
         <div style={{ textAlign: 'center', marginTop: '20px' }}>
-          <a href="/" style={{ color: '#64748B', fontSize: '0.85rem', textDecoration: 'none' }}>‚Üê Volver al inicio</a>
+          <a href='/' style={{ color: '#64748B', fontSize: '0.85rem', textDecoration: 'none' }}>? Volver al inicio</a>
         </div>
       </div>
     </main>
