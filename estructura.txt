@@ -1,0 +1,52 @@
+Folder PATH listing for volume Windows
+Volume serial number is 000000D1 3C5B:ED6B
+C:\USERS\CRISTIAN\DESKTOP\MI-PLATAFORMA-EDUCATIVA\APP
+|   layout.tsx
+|   page.tsx
+|   
++---actions
+|       admin.ts
+|       auth.ts
+|       units.ts
+|       
++---admin
+|   |   page.tsx
+|   |   
+|   +---folders
+|   |   \---[folderId]
+|   |       |   page.tsx
+|   |       |   
+|   |       \---materials
+|   |           \---new
+|   |                   page.tsx
+|   |                   
+|   +---login
+|   |       page.tsx
+|   |       
+|   +---subjects
+|   |   +---new
+|   |   |       page.tsx
+|   |   |       
+|   |   \---[id]
+|   |       |   actions.ts
+|   |       |   page.tsx
+|   |       |   UnitRow.tsx
+|   |       |   
+|   |       +---posts
+|   |       |   \---new
+|   |       |           page.tsx
+|   |       |           
+|   |       \---units
+|   |           \---new
+|   |                   page.tsx
+|   |                   
+|   \---units
+|       \---[unitId]
+|           |   page.tsx
+|           |   
+|           \---folders
+|               \---new
+\---subject
+    \---[id]
+            page.tsx
+            
