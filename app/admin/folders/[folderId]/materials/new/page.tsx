@@ -1,111 +1,105 @@
 import prisma from '@/lib/prisma';
-import { createMaterial } from '@/app/actions/admin';
-import { cookies } from 'next/headers';
-import { redirect, notFound } from 'next/navigation';
+import { redirect } from 'next/navigation';
 
-export const dynamic = 'force-dynamic';
+export default function NewMaterialPage({ params }: { params: { folderId: string } }) {
 
-interface PageProps {
-  params: {
-    folderId: string;
-  };
-}
-
-export default async function NewMaterialPage({ params }: PageProps) {
-  const { folderId } = params;
-
-  // Verificar sesión del profesor
-  const cookieStore = cookies();
-  const adminSession = cookieStore.get('admin_session');
-  if (!adminSession || adminSession.value !== 'true') {
-    redirect('/admin/login');
-  }
-
-  // Buscar la carpeta para mostrar contexto
-  const folder = await prisma.folder.findUnique({
-    where: { id: folderId },
-    include: {
-      unit: {
-        include: { subject: true }
-      }
+  // Esta función se ejecuta en el servidor cuando tocas "Subir Archivo"
+  async function createMaterial(formData: FormData) {
+    'use server';
+    
+    const name = formData.get('name') as string;
+    const file = formData.get('file') as File;
+    
+    if (!name || !file || file.size === 0) {
+      throw new Error('Faltan datos o el archivo está vacío');
     }
-  });
 
-  if (!folder) {
-    notFound();
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+    // 1. Generar un nombre único para el archivo (para que no choque con otros PDFs)
+    const fileExt = file.name.split('.').pop();
+    const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
+
+    // 2. Subir el archivo al bucket "materiales" de Supabase
+    const uploadRes = await fetch(`${supabaseUrl}/storage/v1/object/materiales/${fileName}`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${supabaseKey}`,
+        'Content-Type': file.type,
+      },
+      body: file, // Enviamos el archivo físico
+    });
+
+    if (!uploadRes.ok) {
+      console.error("Error subiendo a Supabase");
+      throw new Error('Error al subir el archivo a la nube');
+    }
+
+    // 3. Crear la URL pública para que los alumnos puedan descargar el PDF
+    const publicUrl = `${supabaseUrl}/storage/v1/object/public/materiales/${fileName}`;
+
+    // 4. Guardar los datos del material en tu base de datos (Prisma)
+    await prisma.material.create({
+      data: {
+        name: name,
+        type: file.type === 'application/pdf' ? 'PDF' : 'ARCHIVO',
+        url: publicUrl,
+        sizeBytes: file.size,
+        order: 1, // Por defecto
+        folderId: params.folderId,
+      }
+    });
+
+    // 5. Volver a la vista de la carpeta
+    redirect(`/admin/folders/${params.folderId}`);
   }
 
   return (
-    <main style={{ minHeight: '100vh', background: '#F8FAFC', paddingBottom: '80px', fontFamily: 'Inter, sans-serif' }}>
-      {/* Barra superior */}
-      <nav style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 5%', background: '#FFFFFF', borderBottom: '1px solid #E2E8F0', position: 'sticky', top: 0, zIndex: 40 }}>
-        <a href="/admin" style={{ color: '#4F46E5', textDecoration: 'none', fontWeight: 600, fontSize: '0.9rem' }}>
-          ← Volver al Panel
-        </a>
-        <span style={{ fontWeight: 600, color: '#0F172A', fontSize: '1rem' }}>
-          {folder.unit.subject.name} &gt; {folder.unit.name} &gt; {folder.name}
-        </span>
-      </nav>
+    <main style={{ minHeight: '100vh', background: '#F8FAFC', padding: '40px 5%', fontFamily: 'Inter, sans-serif' }}>
+      <div style={{ maxWidth: '600px', margin: '0 auto', background: '#FFFFFF', padding: '32px', borderRadius: '12px', border: '1px solid #E2E8F0' }}>
+        <h1 style={{ fontSize: '1.5rem', color: '#0F172A', marginBottom: '8px' }}>Subir Nuevo Material</h1>
+        <p style={{ color: '#64748B', fontSize: '0.9rem', marginBottom: '24px' }}>
+          Selecciona un archivo de tu computadora para subirlo a la plataforma.
+        </p>
 
-      {/* Formulario */}
-      <div style={{ maxWidth: '600px', margin: '40px auto 0 auto', padding: '0 5%' }}>
-        <div style={{ background: '#FFFFFF', padding: '32px', borderRadius: '16px', border: '1px solid #E2E8F0', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)' }}>
-          <h1 style={{ fontSize: '1.5rem', color: '#0F172A', marginTop: '0', marginBottom: '8px' }}>Subir Nuevo Material</h1>
-          <p style={{ color: '#64748B', fontSize: '0.875rem', marginBottom: '24px' }}>Agrega un enlace, documento o recurso digital para los alumnos.</p>
+        {/* Formulario que ejecuta la función createMaterial */}
+        <form action={createMaterial} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+          <div>
+            <label style={{ display: 'block', fontSize: '0.9rem', fontWeight: 600, color: '#0F172A', marginBottom: '8px' }}>
+              Nombre del Material
+            </label>
+            <input 
+              type="text" 
+              name="name" 
+              required 
+              placeholder="Ej: Repartido Práctico 1"
+              style={{ width: '100%', padding: '10px 14px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '0.95rem' }}
+            />
+          </div>
 
-          <form action={createMaterial.bind(null, folderId)} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-            <div>
-              <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 500, color: '#0F172A', marginBottom: '6px' }}>Título del Material</label>
-              <input 
-                type="text" 
-                name="name" 
-                required 
-                placeholder="Ej. Clase 1 - Presentación en PDF"
-                style={{ width: '100%', padding: '10px 14px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '0.95rem', outline: 'none', boxSizing: 'border-box' }}
-              />
-            </div>
+          <div>
+            <label style={{ display: 'block', fontSize: '0.9rem', fontWeight: 600, color: '#0F172A', marginBottom: '8px' }}>
+              Archivo (PDF u otros)
+            </label>
+            <input 
+              type="file" 
+              name="file" 
+              accept=".pdf,.doc,.docx" // Acepta PDFs por defecto
+              required 
+              style={{ width: '100%', padding: '10px 14px', borderRadius: '8px', border: '1px dashed #CBD5E1', fontSize: '0.95rem', background: '#F8FAFC', cursor: 'pointer' }}
+            />
+          </div>
 
-            <div>
-              <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 500, color: '#0F172A', marginBottom: '6px' }}>Tipo de Recurso</label>
-              <select 
-                name="type" 
-                defaultValue="PDF"
-                style={{ width: '100%', padding: '10px 14px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '0.95rem', outline: 'none', boxSizing: 'border-box', background: '#FFFFFF' }}
-              >
-                <option value="PDF">PDF / Documento</option>
-                <option value="LINK">Enlace Web</option>
-                <option value="VIDEO">Video</option>
-                <option value="EXAM">Evaluación / Práctico</option>
-              </select>
-            </div>
-
-            <div>
-              <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 500, color: '#0F172A', marginBottom: '6px' }}>URL o Enlace del Recurso</label>
-              <input 
-                type="url" 
-                name="url" 
-                required 
-                placeholder="https://ejemplo.com/archivo.pdf"
-                style={{ width: '100%', padding: '10px 14px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '0.95rem', outline: 'none', boxSizing: 'border-box' }}
-              />
-            </div>
-
-            <div>
-              <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 500, color: '#0F172A', marginBottom: '6px' }}>Orden de Aparición (Número)</label>
-              <input 
-                type="number" 
-                name="order" 
-                defaultValue={1}
-                required 
-                style={{ width: '100%', padding: '10px 14px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '0.95rem', outline: 'none', boxSizing: 'border-box' }}
-              />
-            </div>
-
-            <button type="submit" style={{ background: '#4F46E5', color: '#FFFFFF', border: 'none', padding: '12px', borderRadius: '8px', fontWeight: 600, cursor: 'pointer', fontSize: '0.95rem', marginTop: '10px' }}>
-              Guardar y Publicar Material
+          <div style={{ display: 'flex', gap: '12px', marginTop: '12px' }}>
+            <button type="submit" style={{ background: '#4F46E5', color: '#FFFFFF', padding: '12px 24px', borderRadius: '8px', border: 'none', fontWeight: 600, fontSize: '0.95rem', cursor: 'pointer', flex: 1 }}>
+              Subir Archivo
             </button>
-          </form>
-        </div>
+            <a href={`/admin/folders/${params.folderId}`} style={{ background: '#F1F5F9', color: '#475569', padding: '12px 24px', borderRadius: '8px', textDecoration: 'none', fontWeight: 600, fontSize: '0.95rem', textAlign: 'center', flex: 1 }}>
+              Cancelar
+            </a>
+          </div>
+        </form>
       </div>
     </main>
   );
