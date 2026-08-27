@@ -1,7 +1,13 @@
 import prisma from '@/lib/prisma';
+import { cookies } from 'next/headers';
 
 export default async function Home() {
-  // 1. Consultar las materias reales desde Supabase ordenadas por fecha
+  // Verificar si hay sesión de profesor activa para mostrar controles de admin
+  const cookieStore = cookies();
+  const adminSession = cookieStore.get('admin_session');
+  const isAdmin = adminSession && adminSession.value === 'true';
+
+  // Consultar las materias reales desde Supabase ordenadas por fecha
   const subjects = await prisma.subject.findMany({
     include: {
       units: {
@@ -22,9 +28,16 @@ export default async function Home() {
         <div style={{ fontFamily: 'Fraunces, serif', fontSize: '1.25rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '8px' }}>
           <span style={{ width: '8px', height: '8px', background: '#4F46E5', borderRadius: '50%' }}></span> Prof. Mariana
         </div>
-        <a href="/admin" style={{ padding: '8px 16px', background: '#F1F5F9', color: '#0F172A', borderRadius: '8px', fontSize: '0.875rem', fontWeight: 500, textDecoration: 'none' }}>
-          💼 Acceso Profesor
-        </a>
+        <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+          {isAdmin && (
+            <a href="/admin" style={{ padding: '8px 16px', background: '#EEF2FF', color: '#4F46E5', borderRadius: '8px', fontSize: '0.875rem', fontWeight: 600, textDecoration: 'none' }}>
+              ⚙️ Ir al Panel Docente
+            </a>
+          )}
+          <a href="/admin/login" style={{ padding: '8px 16px', background: '#F1F5F9', color: '#0F172A', borderRadius: '8px', fontSize: '0.875rem', fontWeight: 500, textDecoration: 'none' }}>
+            💼 Acceso Profesor
+          </a>
+        </div>
       </nav>
 
       {/* Sección Hero / Presentación */}
@@ -48,7 +61,6 @@ export default async function Home() {
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '24px' }}>
           {subjects.map((subject) => {
-            // Calcular estadísticas reales basadas en la base de datos
             const totalUnits = subject.units.length;
             const totalMaterials = subject.units.reduce((acc, unit) => 
               acc + unit.folders.reduce((fAcc, folder) => fAcc + folder.materials.length, 0)
@@ -85,9 +97,16 @@ export default async function Home() {
                     </div>
                   </div>
 
-                  <a href={`/subject/${subject.id}`} style={{ display: 'block', textAlign: 'center', padding: '10px 18px', background: '#FFFFFF', color: '#0F172A', border: '1px solid #E2E8F0', borderRadius: '8px', fontWeight: 500, fontSize: '0.875rem', textDecoration: 'none' }}>
-                    Ingresar →
-                  </a>
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <a href={`/subject/${subject.id}`} style={{ flex: 1, textAlign: 'center', padding: '10px 18px', background: '#FFFFFF', color: '#0F172A', border: '1px solid #E2E8F0', borderRadius: '8px', fontWeight: 500, fontSize: '0.875rem', textDecoration: 'none' }}>
+                      Ingresar →
+                    </a>
+                    {isAdmin && (
+                      <a href={`/admin/subjects/${subject.id}`} style={{ padding: '10px 14px', background: '#EEF2FF', color: '#4F46E5', border: '1px solid #C7D2FE', borderRadius: '8px', fontWeight: 600, fontSize: '0.875rem', textDecoration: 'none' }}>
+                        Gestionar
+                      </a>
+                    )}
+                  </div>
                 </div>
               </div>
             );
