@@ -24,28 +24,30 @@ async function createUnit(formData: FormData) {
 }
 
 export default async function SubjectManagePage({ params }: { params: { id: string } }) {
-  // 1. Verificar sesión de administrador
+  // 1. Resolver params por seguridad en Next.js 14+
+  const resolvedParams = await params;
+  const subjectId = resolvedParams.id;
+
+  // 2. Verificar sesión de administrador
   const cookieStore = cookies();
   const adminSession = cookieStore.get('admin_session');
   if (!adminSession || adminSession.value !== 'true') {
     redirect('/admin/login');
   }
 
-  const subjectId = params.id;
-
-  // 2. Buscar la materia y sus unidades actuales
+  // 3. Buscar la materia y sus unidades actuales
   const subject = await prisma.subject.findUnique({
     where: { id: subjectId },
     include: {
       units: {
-        orderBy: { order: 'asc' },
+        orderBy: { createdAt: 'desc' },
         include: { folders: true },
       },
     },
   });
 
   if (!subject) {
-    redirect('/');
+    redirect('/admin');
   }
 
   return (
@@ -53,7 +55,7 @@ export default async function SubjectManagePage({ params }: { params: { id: stri
       {/* Barra superior */}
       <nav style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 5%', background: '#FFFFFF', borderBottom: '1px solid #E2E8F0', position: 'sticky', top: 0, zIndex: 40 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <a href="/" style={{ color: '#64748B', textDecoration: 'none', fontSize: '0.875rem' }}>← Volver al inicio</a>
+          <a href="/admin" style={{ color: '#64748B', textDecoration: 'none', fontSize: '0.875rem' }}>← Volver al Panel</a>
           <span style={{ color: '#CBD5E1' }}>/</span>
           <span style={{ fontWeight: 600, color: '#0F172A', fontSize: '1rem' }}>Gestión: {subject.name}</span>
         </div>
