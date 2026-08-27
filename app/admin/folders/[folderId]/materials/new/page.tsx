@@ -3,6 +3,8 @@ import { createMaterial } from '@/app/actions/admin';
 import { cookies } from 'next/headers';
 import { redirect, notFound } from 'next/navigation';
 
+export const dynamic = 'force-dynamic';
+
 interface PageProps {
   params: {
     folderId: string;
