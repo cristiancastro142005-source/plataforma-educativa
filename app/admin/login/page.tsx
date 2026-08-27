@@ -1,5 +1,7 @@
 import { loginProfessor } from '@/app/actions/auth';
 
+export const dynamic = 'force-dynamic';
+
 interface PageProps {
   searchParams: {
     error?: string;
