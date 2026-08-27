@@ -1,132 +1,90 @@
 import prisma from '@/lib/prisma';
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
-import { revalidatePath } from 'next/cache';
 
-// Server Action para crear una Unidad dentro de la materia
-async function createUnit(formData: FormData) {
-  'use server';
-  const name = formData.get('name') as string;
-  const subjectId = formData.get('subjectId') as string;
-  const description = formData.get('description') as string;
-
-  if (!name || !subjectId) return;
-
-  await prisma.unit.create({
-    data: {
-      name,
-      subjectId,
-      description: description || null,
-    },
-  });
-
-  revalidatePath(`/admin/subjects/${subjectId}`);
-}
-
-export default async function SubjectManagePage({ params }: { params: { id: string } }) {
-  // 1. Resolver params por seguridad en Next.js 14+
-  const resolvedParams = await params;
-  const subjectId = resolvedParams.id;
-
-  // 2. Verificar sesión de administrador
+export default async function AdminDashboardPage() {
+  // 1. Verificar si el profesor tiene la sesión iniciada mediante cookies
   const cookieStore = cookies();
   const adminSession = cookieStore.get('admin_session');
+
   if (!adminSession || adminSession.value !== 'true') {
     redirect('/admin/login');
   }
 
-  // 3. Buscar la materia y sus unidades actuales
-  const subject = await prisma.subject.findUnique({
-    where: { id: subjectId },
+  // 2. Obtener todas las materias de la base de datos
+  const subjects = await prisma.subject.findMany({
+    orderBy: { createdAt: 'desc' },
     include: {
-      units: {
-        orderBy: { createdAt: 'desc' },
-        include: { folders: true },
-      },
-    },
+      _count: {
+        select: { units: true }
+      }
+    }
   });
-
-  if (!subject) {
-    redirect('/admin');
-  }
 
   return (
     <main style={{ minHeight: '100vh', background: '#F8FAFC', paddingBottom: '80px', fontFamily: 'Inter, sans-serif' }}>
-      {/* Barra superior */}
+      {/* Barra superior de administración */}
       <nav style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 5%', background: '#FFFFFF', borderBottom: '1px solid #E2E8F0', position: 'sticky', top: 0, zIndex: 40 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <a href="/admin" style={{ color: '#64748B', textDecoration: 'none', fontSize: '0.875rem' }}>← Volver al Panel</a>
-          <span style={{ color: '#CBD5E1' }}>/</span>
-          <span style={{ fontWeight: 600, color: '#0F172A', fontSize: '1rem' }}>Gestión: {subject.name}</span>
+          <span style={{ fontSize: '1.2rem' }}>💼</span>
+          <span style={{ fontWeight: 600, color: '#0F172A', fontSize: '1rem' }}>Panel de Docente</span>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+          <a href="/" style={{ color: '#64748B', textDecoration: 'none', fontSize: '0.875rem' }}>Ver sitio público</a>
+          <form action={async () => {
+            'use server';
+            cookies().delete('admin_session');
+            redirect('/admin/login');
+          }}>
+            <button type="submit" style={{ background: '#FEF2F2', color: '#EF4444', border: '1px solid #FCA5A5', padding: '6px 12px', borderRadius: '6px', fontSize: '0.8125rem', fontWeight: 500, cursor: 'pointer' }}>
+              Cerrar sesión
+            </button>
+          </form>
         </div>
       </nav>
 
-      {/* Contenido principal */}
-      <div style={{ maxWidth: '900px', margin: '40px auto 0 auto', padding: '0 5%' }}>
-        <div style={{ marginBottom: '32px' }}>
-          <h1 style={{ fontSize: '1.8rem', color: '#0F172A', margin: 0 }}>{subject.name}</h1>
-          <p style={{ color: '#64748B', fontSize: '0.9rem', marginTop: '4px' }}>Área: {subject.area} • Administra las unidades y contenidos de este espacio.</p>
+      {/* Contenido principal del Dashboard */}
+      <div style={{ maxWidth: '1000px', margin: '40px auto 0 auto', padding: '0 5%' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px' }}>
+          <div>
+            <h1 style={{ fontSize: '1.8rem', color: '#0F172A', margin: 0 }}>Gestión de Materias</h1>
+            <p style={{ color: '#64748B', fontSize: '0.9rem', marginTop: '4px' }}>Administra los espacios académicos de la plataforma.</p>
+          </div>
+          <a href="/admin/subjects/new" style={{ background: '#4F46E5', color: '#FFFFFF', padding: '10px 16px', borderRadius: '8px', textDecoration: 'none', fontWeight: 600, fontSize: '0.875rem' }}>
+            + Nueva Materia
+          </a>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', alignItems: 'start' }}>
-          
-          {/* Formulario para Crear Unidad */}
-          <div style={{ background: '#FFFFFF', padding: '24px', borderRadius: '12px', border: '1px solid #E2E8F0', boxShadow: '0 1px 3px rgba(0,0,0,0.02)' }}>
-            <h3 style={{ fontSize: '1.1rem', color: '#0F172A', marginTop: 0, marginBottom: '16px' }}>+ Nueva Unidad</h3>
-            
-            <form action={createUnit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              <input type="hidden" name="subjectId" value={subject.id} />
-              
-              <div>
-                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 500, color: '#0F172A', marginBottom: '6px' }}>Nombre de la Unidad</label>
-                <input 
-                  type="text" 
-                  name="name" 
-                  required 
-                  placeholder="Ej: Unidad 1 — Funciones"
-                  style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '0.9rem', boxSizing: 'border-box' }}
-                />
-              </div>
-
-              <div>
-                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 500, color: '#0F172A', marginBottom: '6px' }}>Descripción (opcional)</label>
-                <textarea 
-                  name="description" 
-                  placeholder="Breve detalle de los temas..."
-                  style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '0.9rem', minHeight: '80px', boxSizing: 'border-box', resize: 'vertical' }}
-                />
-              </div>
-
-              <button 
-                type="submit"
-                style={{ background: '#4F46E5', color: '#FFFFFF', border: 'none', padding: '10px', borderRadius: '8px', fontWeight: 600, cursor: 'pointer', fontSize: '0.9rem' }}
-              >
-                Guardar Unidad
-              </button>
-            </form>
+        {/* Listado de Materias */}
+        {subjects.length === 0 ? (
+          <div style={{ background: '#FFFFFF', padding: '40px', borderRadius: '12px', border: '1px solid #E2E8F0', textAlign: 'center', color: '#64748B' }}>
+            No hay materias creadas todavía.
           </div>
-
-          {/* Listado de Unidades Existentes */}
-          <div style={{ background: '#FFFFFF', padding: '24px', borderRadius: '12px', border: '1px solid #E2E8F0', boxShadow: '0 1px 3px rgba(0,0,0,0.02)' }}>
-            <h3 style={{ fontSize: '1.1rem', color: '#0F172A', marginTop: 0, marginBottom: '16px' }}>Unidades Creadas</h3>
-
-            {subject.units.length === 0 ? (
-              <p style={{ color: '#64748B', fontSize: '0.875rem', margin: 0 }}>No hay unidades registradas todavía en esta materia.</p>
-            ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                {subject.units.map((unit) => (
-                  <div key={unit.id} style={{ padding: '14px', borderRadius: '8px', border: '1px solid #E2E8F0', background: '#F8FAFC' }}>
-                    <h4 style={{ fontSize: '0.95rem', color: '#0F172A', margin: 0 }}>{unit.name}</h4>
-                    {unit.description && (
-                      <p style={{ fontSize: '0.8rem', color: '#64748B', margin: '4px 0 0 0' }}>{unit.description}</p>
-                    )}
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            {subjects.map(subject => (
+              <div key={subject.id} style={{ background: '#FFFFFF', padding: '20px 24px', borderRadius: '12px', border: '1px solid #E2E8F0', display: 'flex', alignItems: 'center', justifyContent: 'space-between', boxShadow: '0 1px 3px rgba(0,0,0,0.02)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                  <span style={{ fontSize: '2rem', background: '#F1F5F9', padding: '10px', borderRadius: '10px' }}>{subject.icon || '📚'}</span>
+                  <div>
+                    <h3 style={{ fontSize: '1.1rem', color: '#0F172A', margin: 0 }}>{subject.name}</h3>
+                    <p style={{ fontSize: '0.85rem', color: '#64748B', margin: '4px 0 0 0' }}>{subject.area} • {subject._count.units} unidades registradas</p>
                   </div>
-                ))}
-              </div>
-            )}
-          </div>
+                </div>
 
-        </div>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  {/* Botón de gestión añadido */}
+                  <a href={`/admin/subjects/${subject.id}`} style={{ background: '#EEF2FF', color: '#4F46E5', padding: '8px 14px', borderRadius: '6px', fontSize: '0.85rem', textDecoration: 'none', fontWeight: 600 }}>
+                    Gestionar contenido
+                  </a>
+                  <a href={`/subject/${subject.id}`} target="_blank" style={{ background: '#F1F5F9', color: '#334155', padding: '8px 14px', borderRadius: '6px', fontSize: '0.85rem', textDecoration: 'none', fontWeight: 500 }}>
+                    Ver materia
+                  </a>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </main>
   );
